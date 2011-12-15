@@ -1,5 +1,6 @@
 from django.core.urlresolvers import reverse
 from publicweb.tests.decision_test_case import DecisionTestCase
+import publicweb.views
 
 # TODO: Check that POSTs save correct data and redirects work
 class ViewDecisionTest(DecisionTestCase):

@@ -19,18 +19,18 @@ from forms import SortForm
 #This looks like it's already been done... see https://github.com/joshourisman/django-tablib
 def export_csv(request):
     ''' Create the HttpResponse object with the appropriate CSV header and corresponding CSV data from Decision.
-	Expected input: request (not quite sure what this is!)
-	Expected output: http containing MIME info followed by the data itself as CSV.
-	>>> res = export_csv(1000)
-	>>> res.status_code
-	200
-	>>> res['Content-Disposition']
-	'attachment; filename=publicweb_decision.csv'
-	>>> res['Content-Type']
-	'text/csv'
-	>>> len(res.content)>0
-	True
-	'''
+        Expected input: request (not quite sure what this is!)
+        Expected output: http containing MIME info followed by the data itself as CSV.
+        >>> res = export_csv(1000)
+        >>> res.status_code
+        200
+        >>> res['Content-Disposition']
+        'attachment; filename=publicweb_decision.csv'
+        >>> res['Content-Type']
+        'text/csv'
+        >>> len(res.content)>0
+        True
+        '''
 
     def fieldOutput(obj, field):
         '''Looks up the status_text() for status, otherwise just returns the getattr for the field'''
@@ -126,14 +126,14 @@ def modify_decision(request, decision_id = None, status_id = None):
                     else:
                         decision.remove_watcher(request.user)
                     feedback_formset.save()
-                    
+
                     return_page = unicode(decision.status_text())
                     return HttpResponseRedirect(reverse(listing, args=[return_page]))
 
     else:
         feedback_formset = FeedbackFormSet(instance=decision)
         decision_form = DecisionForm(instance=decision)
-        
+
     return render_to_response('decision_edit.html',
         RequestContext(request,
             dict(decision_form=decision_form, feedback_formset=feedback_formset)))
@@ -175,6 +175,30 @@ def inline_edit_decision(request, decision_id, template_name="decision_detail.ht
         RequestContext(request,
             dict(object=decision, decision_form=decision_form, show_form=True)))
 
+def calculate_svg_bars(feedback_counts, max_height):
+    '''
+    Calculate ratios for SVG chart because Django's templating is too limited.
+    Zero count feedback should still have a small bar because it makes
+    chart prettier (currently set to 2 pixel height).
+
+    Custom template tag might be more appropriate with less obvious usage.
+    '''
+    min_height = 2
+    heights = dict(max_height=max_height)
+
+    max_value = max([ feedback_counts[key] for key in feedback_counts if key != 'all' ])
+    if max_value == 0: # Special case: no feedback
+        max_value = 1
+    height_ratio = max_height / max_value
+
+    for feedback_type in feedback_counts:
+        bar_height = int(max(round(feedback_counts[feedback_type] * height_ratio), min_height))
+        heights[feedback_type] = {
+            'height': bar_height,
+            'left': max_height - bar_height # Empty column space needed for SVG drawing
+        }
+    return heights
+
 @login_required
 def view_decision(request, decision_id, template_name="decision_detail.html"):
     decision = get_object_or_404(Decision, id = decision_id)
@@ -182,7 +206,6 @@ def view_decision(request, decision_id, template_name="decision_detail.html"):
                       'question': 0,
                       'danger': 0,
                       'concern': 0,
-                      'test_var': 2,
                       'consensus': 0
                      }
     feedback_list = []
@@ -207,10 +230,11 @@ def view_decision(request, decision_id, template_name="decision_detail.html"):
         feedback_stats['all'] += 1
         feedback_list.append(item)
 
+    bars = calculate_svg_bars(feedback_stats, 36)
 
     return render_to_response(template_name,
         RequestContext(request,
-            dict(object=decision, feedback_stats=feedback_stats, feedback_list=feedback_list)))
+            dict(object=decision, feedback_stats=feedback_stats, bars=bars, feedback_list=feedback_list)))
 
 def _sort(request):
     sort_form = SortForm(request.GET)
@@ -223,4 +247,4 @@ def _sort(request):
 
 def _filter(queryset, status):    
     return queryset.filter(status=status)
-        
+
