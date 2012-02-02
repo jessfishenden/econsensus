@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python
 #
 # This script is to set up various things for our projects. It can be used by:
 #
@@ -177,10 +177,10 @@ def main():
         if o in ("-d", "--description"):
             describe_task(args)
     # process arguments - just call the function with that name
+    tasklib.env['verbose'] = verbose
     tasklib._setup_paths()
     if (hasattr(localtasks, '_setup_paths')):
         localtasks._setup_paths()
-    tasklib.env['verbose'] = verbose
     if len(args) == 0:
         print_help_text()
     for arg in args:

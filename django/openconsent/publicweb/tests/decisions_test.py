@@ -19,7 +19,6 @@ from decision_test_case import DecisionTestCase
 ### 2 - form tests (does the form have x field?)
 ### 3 - browser tests (does page respond correct? does submission work OK?)
 
-
 class DecisionsTest(DecisionTestCase):
     def get(self, view_function, **view_args):
         return self.client.get(reverse(view_function, kwargs=view_args))
@@ -28,25 +27,20 @@ class DecisionsTest(DecisionTestCase):
         """
         Test error conditions for the add decision page. 
         """
-        path = reverse('publicweb_decision_add')
+        path = reverse('publicweb_decision_create', args=[Decision.PROPOSAL_STATUS])
         # Test that the decision add view returns an empty form
-        response = self.client.get(path)
-        form = DecisionForm()
-        self.assertEqual(form.as_p(),
-            response.context['decision_form'].as_p())
-    
-        # Test that the decision add view validates and rejects and empty post
+        actual = self.client.get(path).context['form'].as_p().splitlines()
+        
+        expected = DecisionForm().as_p().splitlines()
 
+        self.assertEqual(expected, actual)
+            
+        # Test that the decision add view validates and rejects and empty post
         post_dict = self.get_default_decision_form_dict()
-        post_dict.update({  
-                            'feedback_set-TOTAL_FORMS': '3',
-                            'feedback_set-INITIAL_FORMS': '0',
-                            'feedback_set-MAX_NUM_FORMS': ''
-                            })        
 
         response = self.client.post(path, post_dict)
 
-        self.assertFalse(response.context['decision_form'].is_valid())
+        self.assertFalse(response.context['form'].is_valid())
         
         # Test that providing a short name is enough to complete the form,
         # save the object and send us back to the home page
@@ -55,23 +49,18 @@ class DecisionsTest(DecisionTestCase):
 
         post_dict.update({  'description': 'Make Eggs',
                             'watch': False,
-                            'submit': "Submit",
-                            'feedback_set-TOTAL_FORMS': '3',
-                            'feedback_set-INITIAL_FORMS': '0',
-                            'feedback_set-MAX_NUM_FORMS': '',
-                            'feedback_set-0-description': 'The eggs are bad',
-                            'feedback_set-1-description': 'No one wants them'})        
+                            'submit': "Submit"})        
        
         response = self.client.post(path, post_dict,
                                     follow=True)
         
         
         self.assertRedirects(response,
-            reverse('list', args=['decision']),
+            reverse('publicweb_item_list', args=['decision']),
             msg_prefix=response.content)
 
     def get_default_decision_form_dict(self):
-        return {'status': 1}
+        return {'status': Decision.DECISION_STATUS}
 
     def get_diff(self, s1, s2): #pylint: disable-msg=C0103
         diff = difflib.context_diff(s1, s2)
@@ -81,31 +70,16 @@ class DecisionsTest(DecisionTestCase):
             
         return rope
         
-    def test_edit_decision(self):
+    def test_decision_form(self):
         decision = self.create_and_return_example_decision_with_feedback()
         
-        path = reverse('publicweb_decision_edit', 
+        path = reverse('publicweb_decision_update', 
                        args=[decision.id])
         response = self.client.get(path)
-        
-        test_form_str = str(DecisionForm(instance=decision))
-        decision_form_str = str(response.context['decision_form'])
-        
-        self.assertEqual(test_form_str, decision_form_str,
-                         self.get_diff(test_form_str, decision_form_str))
-
-    def test_edit_decision_has_feedback_formset(self):
-        decision = self.create_and_return_example_decision_with_feedback()
-        
-        path = reverse('publicweb_decision_edit', args=[decision.id])
-        response = self.client.get(path)
-        
-        feedback_formset = response.context['feedback_formset']
-        feedback = decision.feedback_set.all()
-        self.assertEquals(list(feedback), list(feedback_formset.queryset))
+        self.assertTrue(isinstance(response.context['form'], DecisionForm))
 
     def get_edit_feedback_response(self, decision):
-        path = reverse('publicweb_decision_edit',
+        path = reverse('publicweb_decision_update',
                        args=[decision.id])
         response = self.client.post(path, {'description': 'Modified',
                                     'feedback_set-TOTAL_FORMS': '3',
@@ -116,24 +90,20 @@ class DecisionsTest(DecisionTestCase):
                                     })
         return response
     
-    def test_edit_decision_update_feedback(self):
+    def test_update_feedback(self):
         decision = self.create_and_return_example_decision_with_feedback()
+        feedback = decision.feedback_set.all()[0]
         
-        path = reverse('publicweb_decision_edit', args=[decision.id])
-        page = self.client.get(path)
+        path = reverse('publicweb_feedback_update', args=[feedback.id])        
+        post_data = {'description': 'Modified', 'submit': 'Submit'}
         
-        post_data = self.get_form_values_from_response(page, 2)
-        post_data['description'] = "Description"
-        post_data['feedback_set-0-description'] = 'Modified'
-        post_data['submit'] = 'Submit'
-                
         self.client.post(path, post_data)
         
         decision = Decision.objects.get(id=decision.id)
         self.assertEquals('Modified', decision.feedback_set.all()[0].description)
         
     def get_edit_decision_response(self, decision):
-        path = reverse('publicweb_decision_edit',
+        path = reverse('publicweb_decision_update',
                        args=[decision.id])
         post_dict = self.get_default_decision_form_dict()
         post_dict.update({'description': 'Feed the cat',
@@ -155,34 +125,18 @@ class DecisionsTest(DecisionTestCase):
     def test_redirect_after_edit_decision(self):       
         decision = self.create_and_return_example_decision_with_feedback()
         response = self.get_edit_decision_response(decision)
-        self.assertRedirects(response, reverse('list', args=['decision']),
+        self.assertRedirects(response, reverse('publicweb_item_list', args=['decision']),
             msg_prefix=response.content)
-        
-   
-    def test_add_decision_has_feedback_form(self):
-        response = self.client.get(reverse('publicweb_decision_add'))        
-        self.assertTrue('feedback_formset' in response.context, 
-                        "\"feedback_formset\" not in this context")
-    
-    def test_add_decision_with_feedback(self):
-        post_dict = self.get_default_decision_form_dict()
-        post_dict.update({'description': 'Make Eggs',
-                            'feedback_set-TOTAL_FORMS': '3',
-                            'feedback_set-INITIAL_FORMS': '0',
-                            'feedback_set-MAX_NUM_FORMS': '',
-                            'feedback_set-0-description': 'The eggs are bad',
-                            'feedback_set-1-description': 'No one wants them'})
-        
-        response = self.client.post(reverse('publicweb_decision_add'), 
+            
+    def test_add_feedback(self):
+        decision = Decision(status=Decision.PROPOSAL_STATUS, description='Make Eggs')
+        decision.save()
+        post_dict= {'rating': '2', 'description': 'The eggs are bad'}
+        response = self.client.post(reverse('publicweb_feedback_create', args=[decision.id]), 
                                 post_dict,
-                                follow=True )
-        self.assertEqual(1, len(Decision.objects.all()), "Failed to create object" + response.content)
-        decision = Decision.objects.all()[0]
-               
-        feedback = decision.feedback_set.all()
-        
-        self.assertEquals('The eggs are bad', feedback[0].description)
-        self.assertEquals('No one wants them', feedback[1].description)
+                                follow=True )        
+        feedback = decision.feedback_set.all()[:1].get()
+        self.assertEquals('The eggs are bad', feedback.description)
     
     def assert_decision_datepickers(self, field):
         form = DecisionForm()
@@ -220,14 +174,9 @@ class DecisionsTest(DecisionTestCase):
     def test_add_decision_web_post_updates_watchers(self):
         post_dict = self.get_default_decision_form_dict()
         post_dict.update({'description': 'Make Eggs',
-                            'watch': True,
-                            'feedback_set-TOTAL_FORMS': '3',
-                            'feedback_set-INITIAL_FORMS': '0',
-                            'feedback_set-MAX_NUM_FORMS': '',
-                            'feedback_set-0-description': 'The eggs are bad',
-                            'feedback_set-1-description': 'No one wants them'})
+                            'watch': True })
         
-        self.client.post(reverse('publicweb_decision_add'), 
+        self.client.post(reverse('publicweb_decision_create', args=[0]), 
                                 post_dict,
                                 follow=True )
 
@@ -247,7 +196,7 @@ class DecisionsTest(DecisionTestCase):
                             'feedback_set-0-description': 'The eggs are bad',
                             'feedback_set-1-description': 'No one wants them'})
         
-        self.client.post(reverse('publicweb_decision_edit', args=[decision.id]), 
+        self.client.post(reverse('publicweb_decision_update', args=[decision.id]), 
                                 post_dict,
                                 follow=True )
 
@@ -280,7 +229,7 @@ class DecisionsTest(DecisionTestCase):
                             'feedback_set-0-description': 'The eggs are bad',
                             'feedback_set-1-description': 'No one wants them'})
         
-        response = self.client.post(reverse('publicweb_decision_add'), 
+        response = self.client.post(reverse('publicweb_decision_create', args=[0]), 
                                 post_dict,
                                 follow=True )
         self.assertEqual(1, len(Decision.objects.all()), "Failed to create object" + response.content)
@@ -288,17 +237,17 @@ class DecisionsTest(DecisionTestCase):
         self.assertEqual(0, len(decision.watchers.all()), "watch was deselected!")
         
     def test_add_page_contains_cancel(self):
-        path = reverse('publicweb_decision_add')
+        path = reverse('publicweb_decision_create', args=[0])
         response = self.client.get(path)
                 
-        self.assertContains(response, 'type="submit" value="Cancel"', count=2)
+        self.assertContains(response, 'type="submit" value="Cancel"', count=1)
 
     def test_edit_page_contains_cancel(self):
         decision = self.create_and_return_decision()
-        path = reverse('publicweb_decision_edit', args=[decision.id])
+        path = reverse('publicweb_decision_update', args=[decision.id])
         response = self.client.get(path)
         
-        self.assertContains(response, 'type="submit" value="Cancel"', count=2)
+        self.assertContains(response, 'type="submit" value="Cancel"', count=1)
 
     def test_cancel_does_not_add_changes(self):
         post_dict = self.get_default_decision_form_dict()
@@ -311,7 +260,7 @@ class DecisionsTest(DecisionTestCase):
                             'feedback_set-0-description': 'The eggs are bad',
                             'feedback_set-1-description': 'No one wants them'})        
         
-        path = reverse('publicweb_decision_add')
+        path = reverse('publicweb_decision_create', args=[0])
         self.client.post(path, post_dict)
 
         self.assertEqual(0, len(Decision.objects.all()), "Hitting 'Cancel' created an object!")
@@ -329,7 +278,7 @@ class DecisionsTest(DecisionTestCase):
                             'feedback_set-0-description': 'The eggs are bad',
                             'feedback_set-1-description': 'No one wants them'})        
         
-        path = reverse('publicweb_decision_edit', args=[decision.id])
+        path = reverse('publicweb_decision_update', args=[decision.id])
         self.client.post(path,
                                 post_dict,
                                 follow=True )

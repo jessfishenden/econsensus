@@ -1,15 +1,13 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% comment %}This is a stub template for the time being - PCB {% endcomment %}
-
 {% block title %}
 	{{ object.excerpt}}
 {% endblock %}
 
 {% block head_content %}
 {{ object.media }}
-	<link href="/site_media//jquery/jquery-ui.css" type="text/css" media="all" rel="stylesheet" />
+	<link href="{{ MEDIA_URL }}jquery/jquery-ui.css" type="text/css" media="all" rel="stylesheet" />
 	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>
 	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.13/jquery-ui.min.js"></script>
 {% if not show_form %}
@@ -25,7 +23,7 @@ jQuery(function ($) {
 
 	// Override redirect to form and put it inline
 	$(".edit_decision a").live("click", function (e) {
-		replaceWithRemote("{% url inline_edit_decision_form object.id %}", "#decision");
+		replaceWithRemote("{% url publicweb_decision_snippet_update object.id %}", "#decision");
 		e.preventDefault();
 	});
 
@@ -33,11 +31,11 @@ jQuery(function ($) {
 	$('.edit_decision_form').live("submit", function (e) {
 		var parameters = $(this).serialize();
 
-		$.post("{% url inline_edit_decision_form object.id %}",
+		$.post("{% url publicweb_decision_update object.id %}",
 			parameters,
 			function (data) {
 				// Post successful, now fetch stored value and add it as a snippet
-				replaceWithRemote("{% url view_decision_snippet object.id %}", "form.edit_decision_form");
+				replaceWithRemote("{% url publicweb_decision_snippet_detail object.id %}", "form.edit_decision_form");
 			}
 		);
 		e.preventDefault();
@@ -52,34 +50,20 @@ jQuery(function ($) {
 
 {% block main_content %}
 
-{% if show_form %}
-<form action="#" method="post" class="edit_decision_form">
-  {% include "decision_form.html" %}
-	<p class="decision_controls">
-		<input type="submit" name="submit" value="Submit" />
-		 <input type="submit" name="submit" value="Cancel" />
-	</p>
-</form>
-{% else %}
 {% include "decision_detail_snippet.html" %}
-{% endif %}
 
 <h2 class="page_title">{% trans "Feedback" %}</h2>
 <div class="decision_feedback">
-{% if feedback_list|length %}
-	<ol class="feedback_list">{% for feedback in feedback_list %}
-		<li>
-			<div class="decision_type {{ feedback.type }}">{{ feedback.type }}</div>
-			<div class="description">
-			{{ feedback.description }}
-			</div>
-		</li>{% endfor %}
+{% if object.feedback_set.all %}
+	<ol class="feedback_list">
+{% for feedback in object.feedback_set.all %}
+{% include "feedback_detail_snippet.html" with object=feedback %}
+{% endfor %}
 	</ol>
 {% else %}
-<p>{% trans "No feedback yet." %}
+<p>{% trans "No feedback yet." %}</p>
 {% endif %}
+<a href='{% url publicweb_feedback_create object.id %}'>Click to add feedback</a>
 </div>
-
-<h2 class="page_title">{% trans "Members:" %}</h2>
 
 {% endblock %}

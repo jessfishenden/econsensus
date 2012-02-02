@@ -12,7 +12,7 @@
 	<div id="header-wrapper">		
 		<div id="header">
 		
-			<h1><a href="http://www.econsensus.org/"><img alt="Econsensus" src="{{MEDIA_URL}}/images/econsensus-logo-header.png"/></a><span class="user-org not_translated">: Aptivate</span></h1>
+			<h1><a href={% url publicweb_item_list 'proposal'%}><img alt="Econsensus" src="{{MEDIA_URL}}/images/econsensus-logo-header.png"/></a><span class="user-org not_translated">: Aptivate</span></h1>
 
 			{% block user_access %}
 				<div id="user_access">
@@ -30,9 +30,9 @@
 			<div id="navigation-wrapper">
 				<div id="navigation">
 					<ul>
-						<li class="navigation_proposals"><a href="{% url list 'proposal'%}">{% trans "Proposals" %}</a></li>
-						<li class="navigation_decisions"><a href="{% url list "decision"%}">{% trans "Decisions" %}</a></li>
-						<li class="navigation_archived"><a href="{% url list "archived"%}">{% trans "Archived" %}</a></li>
+						<li class="navigation_proposals"><a href="{% url publicweb_item_list 'proposal'%}">{% trans "Proposals" %}</a></li>
+						<li class="navigation_decisions"><a href="{% url publicweb_item_list "decision"%}">{% trans "Decisions" %}</a></li>
+						<li class="navigation_archived"><a href="{% url publicweb_item_list "archived"%}">{% trans "Archived" %}</a></li>
 					</ul>
 					<form id="search_form" action="search" method="get">
 						<p>
@@ -41,8 +41,8 @@
 						</p>
 					</form>
 					<div class="user-actions">
-						<a class="button add_decision" href="{% url publicweb.views.add_decision_status 1 %}">{% trans "Add Decision" %}</a>
-						<a class="button add_proposal" href="{% url publicweb.views.add_decision_status 0 %}">{% trans "Add Proposal" %}</a>
+						<a class="button add_decision" href="{% url publicweb_decision_create 1 %}">{% trans "Add Decision" %}</a>
+						<a class="button add_proposal" href="{% url publicweb_decision_create 0 %}">{% trans "Add Proposal" %}</a>
 					</div>	
 				</div>
 			</div>

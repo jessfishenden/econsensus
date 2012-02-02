@@ -92,7 +92,6 @@ textarea, input {
   	-webkit-border-radius: 10px;
     border-radius: 10px;
     box-shadow: inset 3px 3px 3px #CCCCCC;
-    display: block;
     position: relative;
 }
 
@@ -235,9 +234,7 @@ body.archived-list ul li.navigation_archived a {
 
 #content h2.page_title {
 	color:#666;
-	display:block;
 	float:left;
-	width:100%;
 	padding-bottom: 6px;
 }
 
@@ -248,7 +245,7 @@ dt {
 }
 
 .summary-list {
- 	border: 6px solid #D3CDC6;
+ 	border: 2px solid #D3CDC6;
  	-moz-border-radius: 20px;
   	-webkit-border-radius: 20px;
     border-radius: 20px;
@@ -260,19 +257,30 @@ li.summary-item, .summary-header {
 	border:3px solid;
 	-moz-border-radius: 10px;
   	-webkit-border-radius: 10px;
-	border-radius:10px;
-	padding:10px;
+	border-radius:10px;	padding:10px;
 	margin:2px 0;
 	overflow:auto;
+	position:relative;
 }
 
 .summary-header {
-	border:none;
+	border: 1px solid #D3CDC6;
 }
 
-.summary-item a {
-	display: block;
-	color: #000000;
+.summary-header.proposal {
+	background: #FFCC00;
+}
+
+.summary-header.decision {
+	background: #AAD400;	
+}
+
+.summary-header a {
+	color: #000;
+}
+
+.summary-header a.sort {
+	text-decoration: underline;
 }
 
 .summary-item a.iconified {
@@ -281,20 +289,19 @@ li.summary-item, .summary-header {
 
 /* borders */
 
-
 li.summary-item {
 	border-color:  #ECECEC;
 }
 
-.archived-list li.summary-item {
+.archived-list li.summary-item  {
 	border-color: #483E37;
 }
 
-.proposal-list li.summary-item {
+.proposal-list li.summary-item  {
 	border-color: #FFCC00;
 }
 
-.decision-list li.summary-item {
+.decision-list li.summary-item  {
 	border-color: #AAD400;
 }
 
@@ -309,6 +316,8 @@ li.summary-item {
     font-size: 0.9em;
     font-weight: bold;
 	border:3px solid #EFEFEF;
+	color: #3E6EA3;
+	
 }
 
 #sort_form {
@@ -319,49 +328,70 @@ li.summary-item {
 
 .field {
 	float: left;
-	display: block;
 	margin-left: 10px;
+	margin-right: 10px;
 }
 
 .field.id {
-    width: 50px;
+    width: 3em;
 }
 
 .field.excerpt {
-	width:70%;
+	width:60%;
 }
 
 .field.feedbackcount {
-	width: 120px;
+	width: 5em;
 	float: right;
+	text-align: center;
 }
 
 .field.decided_date {
-	width: 120px;
+	width: 8em;
 	float: right;
 	
+}
+
+.field.watchercount {
+    width: 5em;
+    float: right;
+    text-align: center;
 }
 
 .field.review_date {
-	width: 120px;
+	width: 8em;
 	float: right;
 	
 }
 
+.field.archived_date {
+    float: right;
+	width: 8em;
+}
+
 .field.created_date{
-	width:120px;
+	width: 8em;
 	float: right;
 }
 
 .field.deadline {
-	width:120px;
+	width: 8em;
 	float: right;	
+	text-align: center;
 }
 
 /* Proposal list view */
 
 #header h1 span {
 	line-height:1.5em;
+}
+
+.urloverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+	width: 100%;
 }
 
 a.button.add_decision {
@@ -547,10 +577,10 @@ margin: 0 0 0 6em;
 }
 
 .decision_controls {
-	clear: both;
-	display: block;
-	position: relative;
-	width: 100%;
+	float: right;
+	padding-bottom:6px;
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
 }
 
 .decision_controls div {
@@ -723,6 +753,7 @@ margin: 0 0 0 6em;
 }
 
 .formset_item .form_item.description {
+	width: 85%;
 	padding: 8px;
 	position: relative;
 }
@@ -730,14 +761,23 @@ margin: 0 0 0 6em;
 .formset_item .form_item.description textarea {
 	font-size: 1.1em;
 	color: #333;
-	width: 98%;
-	height: 40px;
+	width: 96%;
 	padding: 10px;
+	height: 20px;
+}
+
+.formset_item .form_item.description textarea.expanded {
+	height: 120px;
+}
+
+.formset_item .form_item.description textarea.collapsed {
+	height: 20px;
 }
 
 .formset_item .form_item.rating {
+	float: right;
 	padding: 4px;
-	width: 15%;
+	width: 10%;
 	display: block;
 	font-size: 0.7em;
 }

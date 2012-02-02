@@ -4,7 +4,6 @@ from django import forms
 from models import Decision, Feedback
 
 from django.utils.translation import ugettext_lazy as _
-from django.forms.models import inlineformset_factory
 from django.forms.fields import ChoiceField
 
 from widgets import JQueryUIDateWidget
@@ -12,10 +11,7 @@ from widgets import JQueryUIDateWidget
 class FeedbackForm(forms.ModelForm):
     class Meta:
         model = Feedback
-
-FeedbackFormSet = inlineformset_factory(Decision, Feedback,  #pylint: disable-msg=C0103
-                                       fields=('description','resolved','rating'),
-                                       form=FeedbackForm)
+        exclude = ("decision",)
 
 class DecisionForm(forms.ModelForm):
     
@@ -27,11 +23,7 @@ class DecisionForm(forms.ModelForm):
                    'decided_date': JQueryUIDateWidget,
                    'effective_date': JQueryUIDateWidget,
                    'review_date': JQueryUIDateWidget,
-                   'expiry_date': JQueryUIDateWidget,
-                   'deadline': JQueryUIDateWidget,
-                   'archived_date': JQueryUIDateWidget,
-                   'budget': forms.TextInput(),
-                   'people': forms.TextInput()
+                   'expiry_date': JQueryUIDateWidget
                    }
 
 EXTRA_CHOICE = (3, _('All')) #pylint: disable-msg=E1102

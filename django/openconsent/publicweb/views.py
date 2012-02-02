@@ -6,13 +6,35 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.decorators import login_required
 from django.views.generic import list_detail
 from django.http import HttpResponse
-from django.utils.translation import ugettext_lazy as _
 
 import unicodecsv
 
-from models import Decision, Feedback
-from forms import DecisionForm, FeedbackFormSet
-from forms import SortForm
+from models import Decision
+from publicweb.forms import DecisionForm, FeedbackForm, SortForm
+
+#TODO: Remove references to feedback...
+def process_post_and_redirect(request, decision, template_name):
+    if request.POST.get('submit', None) == "Cancel":
+        return_page = unicode(decision.status_text())            
+        return HttpResponseRedirect(reverse(object_list_by_status, args=[return_page]))
+    else:
+        form = DecisionForm(request.POST, instance=decision)
+        
+        if form.is_valid():
+            decision = form.save(commit=False)
+            decision.author = request.user
+            decision.save()
+            if form.cleaned_data['watch']:
+                decision.add_watcher(request.user)
+            else:
+                decision.remove_watcher(request.user)
+                
+            return_page = unicode(decision.status_text())
+            return HttpResponseRedirect(reverse(object_list_by_status, args=[return_page]))
+        
+        data = dict(form=form)
+        context = RequestContext(request, data)
+        return render_to_response(template_name, context)
 
 #TODO: Exporting as csv is a generic function that can be required of any database.
 #Therefore it should be its own app.
@@ -52,27 +74,6 @@ def export_csv(request):
         writer.writerow([unicode(fieldOutput(obj, field)).encode("utf-8","replace") for field in field_names])
     return response
 
-# TODO: a better way to handle all these list views is to create a single view for listing items
-# that view will use a search function that takes a 'filter' parameter and an 'order_by' parameter and gives an ordered queryset back.
-# The list view will use a single template but will pass a parameter as extra context to individualise the page
-
-proposal_context = {'page_title' : _("Current Active Proposals"), # pylint: disable=E1102
-                     'class' : 'proposal',
-                     'columns': ('id', 'excerpt', 'feedbackcount', 'deadline')}
-
-decision_context = {'page_title' : _("Decisions Made"), # pylint: disable=E1102
-                     'class' : 'decision',
-                     'columns': ('id', 'excerpt', 'decided_date', 'review_date')}
-
-archived_context = {'page_title' : _("Archived Decisions"), # pylint: disable=E1102
-                     'class' : 'archived',
-                     'columns': ('id', 'excerpt', 'created_date', 'archived_date')}
-
-context_list = { 'proposal' : proposal_context,
-             'decision' : decision_context,
-             'archived' : archived_context,
-             }
-
 #Codes are used to dodge translation in urls.
 #Need to think of a better way to do this...
 context_codes = { 'proposal' : Decision.PROPOSAL_STATUS,
@@ -81,169 +82,103 @@ context_codes = { 'proposal' : Decision.PROPOSAL_STATUS,
              }
 
 @login_required        
-def listing(request, status):
-    extra_context = context_list[status]
-    extra_context['sort_form'] = SortForm(request.GET)
-    status_code = context_codes[status]
+def object_list_by_status(request, status_text):
+    extra_context = { 'status_text': status_text,
+                     'sort_form': SortForm(request.GET) }
+    status = context_codes[status_text]
+    #need to check template exists...
+    template_name = status_text + '_list.html'
     
-    queryset = _filter(_sort(request), status_code)
+    if 'sort' in request.GET:
+        order = str(request.GET['sort'])
+    else:
+        order = 'id'
+    queryset = Decision.objects.order_by(order).filter(status=status)
+    extra_context['sort'] = order
     
     return list_detail.object_list(
         request,
         queryset,
-        template_name = 'consensus_list.html',
+        template_name = template_name,
         extra_context = extra_context
         )
 
 @login_required
-def modify_decision(request, decision_id = None, status_id = None):
-    if decision_id is None:
-        decision = Decision()
-        if status_id is not None:
-            decision.status = int(status_id)
-    else:
-        decision = get_object_or_404(Decision, id = decision_id)
+def create_decision(request, status_id, template_name):
+    
+    decision = Decision(status=int(status_id))
     
     if request.method == "POST":
+        return process_post_and_redirect(request, decision, template_name)
+
+    form = DecisionForm(instance=decision)    
+    data = dict(form=form)
+    context = RequestContext(request, data)
+    return render_to_response(template_name, context)
+
+def update_decision(request, object_id, template_name):
+    decision = get_object_or_404(Decision, id = object_id)
+
+    if request.method == "POST":
+        return process_post_and_redirect(request, decision, template_name)
+
+    form = DecisionForm(instance=decision)    
+    data = dict(form=form)
+    context = RequestContext(request, data)
+    return render_to_response(template_name, context)
+
+def create_feedback(request, model, object_id, template_name):
+
+    decision = get_object_or_404(model, id = object_id)
+            
+    if request.method == "POST":
         if request.POST.get('submit', None) == "Cancel":
-            return_page = unicode(decision.status_text())            
-            return HttpResponseRedirect(reverse(listing, args=[return_page]))
-        
+            return_page = unicode(decision.id)            
+            return HttpResponseRedirect(reverse('publicweb_item_detail', args=[return_page]))
         else:
-            decision_form = DecisionForm(data=request.POST, 
-                                         instance=decision)
-            feedback_formset = FeedbackFormSet(data=request.POST, 
-                                               instance=decision)
-
-            if decision_form.is_valid():
-                decision = decision_form.save(commit=False)
-                feedback_formset = FeedbackFormSet(request.POST, 
-                                                   instance=decision)
-                if feedback_formset.is_valid():
-                    decision.save(request.user)
-                    if decision_form.cleaned_data['watch']:
-                        decision.add_watcher(request.user)
-                    else:
-                        decision.remove_watcher(request.user)
-                    feedback_formset.save()
-
-                    return_page = unicode(decision.status_text())
-                    return HttpResponseRedirect(reverse(listing, args=[return_page]))
+            form = FeedbackForm(request.POST)
+            if form.is_valid():
+                feedback = form.save(commit=False)
+                feedback.decision = decision
+                feedback.save()
+                return_page = unicode(decision.id)
+                return HttpResponseRedirect(reverse('publicweb_item_detail', args=[return_page]))
+        
+        data = dict(form=form)
+        context = RequestContext(request, data)
+        return render_to_response(template_name, context)
 
     else:
-        feedback_formset = FeedbackFormSet(instance=decision)
-        decision_form = DecisionForm(instance=decision)
+        form = FeedbackForm()
+        
+    data = dict(form=form)
+    context = RequestContext(request, data)
+    return render_to_response(template_name, context)
 
-    return render_to_response('decision_edit.html',
-        RequestContext(request,
-            dict(decision_form=decision_form, feedback_formset=feedback_formset)))
+def update_feedback(request, model, object_id, template_name):
 
-@login_required
-def add_decision(request):
-    return modify_decision(request)
-
-@login_required
-def add_decision_status(request, status_id):
-    return modify_decision(request, status_id = status_id)
-
-@login_required    
-def edit_decision(request, decision_id):
-    return modify_decision(request, decision_id = decision_id)
-
-@login_required
-def inline_edit_decision(request, decision_id, template_name="decision_detail.html"):
-    if decision_id is None:
-        decision = None
-    else:
-        decision = get_object_or_404(Decision, id = decision_id)
+    feedback = get_object_or_404(model, id = object_id)
 
     if request.method == "POST":
         if request.POST.get('submit', None) == "Cancel":
-            return HttpResponseRedirect(reverse("view_decision", args=[decision_id]))
-
+            return HttpResponseRedirect(feedback.get_parent_url())
         else:
-            decision_form = DecisionForm(data=request.POST, 
-                                         instance=decision)
-            if decision_form.is_valid():
-                decision = decision_form.save(commit=False)
-                decision.save(request.user)
-                return HttpResponseRedirect(reverse("view_decision", args=[decision_id]))
+            form = FeedbackForm(request.POST, instance=feedback)
+            if form.is_valid():
+                form.save()
+                return HttpResponseRedirect(feedback.get_parent_url())
+        
+        data = dict(form=form)
+        context = RequestContext(request, data)
+        return render_to_response(template_name, context)
+
     else:
-        decision_form = DecisionForm(instance=decision)
+        form = FeedbackForm(instance=feedback)
+        
+    data = dict(form=form)
+    context = RequestContext(request, data)
+    return render_to_response(template_name, context)
 
-    return render_to_response(template_name,
-        RequestContext(request,
-            dict(object=decision, decision_form=decision_form, show_form=True)))
-
-def calculate_svg_bars(feedback_counts, max_height):
-    '''
-    Calculate ratios for SVG chart because Django's templating is too limited.
-    Zero count feedback should still have a small bar because it makes
-    chart prettier (currently set to 2 pixel height).
-
-    Custom template tag might be more appropriate with less obvious usage.
-    '''
-    min_height = 2
-    heights = dict(max_height=max_height)
-
-    max_value = max([ feedback_counts[key] for key in feedback_counts if key != 'all' ])
-    if max_value == 0: # Special case: no feedback
-        max_value = 1
-    height_ratio = max_height / max_value
-
-    for feedback_type in feedback_counts:
-        bar_height = int(max(round(feedback_counts[feedback_type] * height_ratio), min_height))
-        heights[feedback_type] = {
-            'height': bar_height,
-            'left': max_height - bar_height # Empty column space needed for SVG drawing
-        }
-    return heights
-
-@login_required
-def view_decision(request, decision_id, template_name="decision_detail.html"):
-    decision = get_object_or_404(Decision, id = decision_id)
-    feedback_stats = {'all': 0,
-                      'question': 0,
-                      'danger': 0,
-                      'concern': 0,
-                      'consensus': 0
-                     }
-    feedback_list = []
-
-    # Bookkeeping
-    for feedback in decision.feedback_set.all():
-        item = {
-            'description': feedback.description
-        }
-        if feedback.rating == Feedback.QUESTION_STATUS:
-            feedback_stats['question'] += 1
-            item['type'] = 'question'
-        elif feedback.rating == Feedback.DANGER_STATUS:
-            feedback_stats['danger'] += 1
-            item['type'] = 'danger'
-        elif feedback.rating == Feedback.SIGNIFICANT_CONCERNS_STATUS:
-            feedback_stats['concern'] += 1
-            item['type'] = 'concern'
-        else:
-            feedback_stats['consensus'] += 1
-            item['type'] = 'consensus'
-        feedback_stats['all'] += 1
-        feedback_list.append(item)
-
-    bars = calculate_svg_bars(feedback_stats, 36)
-
-    return render_to_response(template_name,
-        RequestContext(request,
-            dict(object=decision, feedback_stats=feedback_stats, bars=bars, feedback_list=feedback_list)))
-
-def _sort(request):
-    sort_form = SortForm(request.GET)
-    if sort_form.is_valid() and sort_form.cleaned_data['sort']:
-        order = str(sort_form.cleaned_data['sort'])
-    else:
-        order = '-id'
-
-    return Decision.objects.order_by(order)
 
 def _filter(queryset, status):    
     return queryset.filter(status=status)

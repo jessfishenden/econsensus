@@ -79,7 +79,12 @@ class Decision(models.Model):
     def remove_watcher(self, user):
         if user in self.watchers.all():
             self.watchers.remove(user)
-    
+
+    def watchercount(self):
+        return self.watchers.count()
+
+    watchercount.short_description = _("Watchers")
+
     def status_text(self):
         return self.STATUS_CHOICES[self.status][1]
     
@@ -119,11 +124,33 @@ class Decision(models.Model):
     
     @models.permalink
     def get_absolute_url(self):
-        return ('publicweb_decision_edit', (), {'decision_id':self.id})
+        return ('publicweb_decision_detail', (), {'object_id':self.id})
+    
+    def get_feedback_statistics(self):
+        statistics = {'all': 0,
+                      'question': 0,
+                      'danger': 0,
+                      'concern': 0,
+                      'consensus': 0
+                     }
+        
+        #is there a better way of doing this,
+        #using object/filter/count? - pcb
+        for feedback in self.feedback_set.all():
+            if feedback.rating == Feedback.QUESTION_STATUS:
+                statistics['question'] += 1
+            elif feedback.rating == Feedback.DANGER_STATUS:
+                statistics['danger'] += 1
+            elif feedback.rating == Feedback.SIGNIFICANT_CONCERNS_STATUS:
+                statistics['concern'] += 1
+            else:
+                statistics['consensus'] += 1
+            statistics['all'] += 1
+        
+        return statistics
 
-    def save(self, author, *args, **kwargs):
+    def save(self, *args, **kwargs):
         self.excerpt = self._get_excerpt()        
-        self.author = author
 
         if not self.id:
             self.created_date = datetime.date.today()        
@@ -164,10 +191,10 @@ class Feedback(models.Model):
     DELIGHTED_STATUS = 5
 
     RATING_CHOICES = ( 
-                  (QUESTION_STATUS, _('Question')),
-                  (DANGER_STATUS, _('Danger')),
-                  (SIGNIFICANT_CONCERNS_STATUS, _('Concerns')),
-                  (CONSENT_STATUS, _('Consent')),
+                  (QUESTION_STATUS, _('question')),
+                  (DANGER_STATUS, _('danger')),
+                  (SIGNIFICANT_CONCERNS_STATUS, _('concerns')),
+                  (CONSENT_STATUS, _('consent')),
                   )
     
     description = models.TextField(verbose_name=_('Description'), null=True, blank=True)    
@@ -177,3 +204,14 @@ class Feedback(models.Model):
                                  verbose_name=_('Rating'),
                                  null=True, 
                                  blank=True )
+
+    @models.permalink
+    def get_absolute_url(self):
+        return ('publicweb_feedback_detail', (), {'object_id':self.id})
+
+    @models.permalink
+    def get_parent_url(self):
+        return ('publicweb_item_detail', (), {'object_id': self.decision.id})
+
+    def rating_text(self):
+        return self.RATING_CHOICES[self.rating][1]
