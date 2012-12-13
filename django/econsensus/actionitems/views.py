@@ -1,4 +1,4 @@
-from django.core.urlresolvers import reverse_lazy
+from django.core.urlresolvers import reverse_lazy, reverse
 from django.views.generic import ListView
 from django.shortcuts import redirect
 from django.views.generic.edit import CreateView, UpdateView
@@ -17,6 +17,17 @@ class ActionItemCreate(CreateView):
     template_name = 'actionitems/create.html'
     success_url = reverse_lazy('list_tasks')
     form_class = ActionItemCreateForm
+    
+    def get(self, request, *args, **kwargs):
+        self.initiator_id = request.GET.get('initiator_id', None)
+        print self.initiator_id
+        return super(ActionItemCreate, self).get(request, *args, **kwargs) 
+
+    def form_valid(self, form):
+        #form.instance.initiator_id = self.initiator_id <- GRRRRR
+        form.instance.initiator_id = 3
+        return super(ActionItemCreate, self).form_valid(form)
+        
 
 class ActionItemUpdate(UpdateView):
     model = ActionItem

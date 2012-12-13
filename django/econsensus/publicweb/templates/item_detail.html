@@ -189,25 +189,29 @@
 {% block heading_title %}{% endblock %}
 
 {% block main_content %}
-
 {% if not organization|is_member:user %}
 	<p>{% trans "You are not a member of this organization." %}<p>
+
 {% else %}
-{% include "decision_detail_snippet.html" %}
+    {% include "decision_detail_snippet.html" %}
 
-<h2 class="page_title feedback">{% trans "Feedback" %}</h2>
-{% if "edit_decisions_feedback" in organization_permissions %}
-<div id="feedback_add_anchor"><a class="button add_feedback" href='{% url 'publicweb_feedback_create' object.id %}'><span>Add new feedback</span></a></div>
-{% endif %}
-<div class="decision_feedback">
+    <h2 class="page_title actionitems">{% trans "Action Items" %}</h2>
+    <a href="{% url 'add_task' %}?initiator_id={{ object.id }}">{% trans 'Add Action Item' %}</a>
+    {% include "actionitems/list.html" %}
 
-  <ol class="feedback_list">
-{% for feedback in object.feedback_set.all %}
-{% include "feedback_detail_snippet.html" with object=feedback %}
-{% empty %}
-	<li class="no_feedback">{% trans "No feedback yet." %}</li>
-{% endfor %}
-  </ol>
-</div>
+    <h2 class="page_title feedback">{% trans "Feedback" %}</h2>
+    {% if "edit_decisions_feedback" in organization_permissions %}
+        <div id="feedback_add_anchor"><a class="button add_feedback" href='{% url 'publicweb_feedback_create' object.id %}'><span>Add new feedback</span></a></div>
+    {% endif %}
+
+    <div class="decision_feedback">
+        <ol class="feedback_list">
+        {% for feedback in object.feedback_set.all %}
+            {% include "feedback_detail_snippet.html" with object=feedback %}
+            {% empty %}
+	        <li class="no_feedback">{% trans "No feedback yet." %}</li>
+        {% endfor %}
+        </ol>
+    </div>
 {% endif %}
 {% endblock %}
