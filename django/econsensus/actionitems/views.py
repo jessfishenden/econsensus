@@ -18,14 +18,12 @@ class ActionItemCreate(CreateView):
     success_url = reverse_lazy('list_tasks')
     form_class = ActionItemCreateForm
     
-    def get(self, request, *args, **kwargs):
-        self.initiator_id = request.GET.get('initiator_id', None)
-        print self.initiator_id
-        return super(ActionItemCreate, self).get(request, *args, **kwargs) 
+    def post(self, request, *args, **kwargs):
+        self.initiator_id = request.GET.get('initiator_id')
+        return super(ActionItemCreate, self).post(request, *args, **kwargs) 
 
     def form_valid(self, form):
-        #form.instance.initiator_id = self.initiator_id <- GRRRRR
-        form.instance.initiator_id = 3
+        form.instance.initiator_id = self.initiator_id
         return super(ActionItemCreate, self).form_valid(form)
         
 
