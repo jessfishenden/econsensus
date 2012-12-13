@@ -1,0 +1,9 @@
+{% load url from future %}
+{% load i18n %}
+
+<a class="task-form cancel" href="{% url 'list_tasks' %}">{% trans 'Close' %}</a>
+
+<form class="task-form" method="post">{% csrf_token %}
+    {{ form.as_p }}
+    <input class="task-form button" type="submit" value="{% trans 'Submit' %}" />
+</form>
