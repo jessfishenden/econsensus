@@ -15,17 +15,17 @@ class ActionItemList(ListView):
 class ActionItemCreate(CreateView):
     model = ActionItem
     template_name = 'actionitems/create.html'
-    success_url = reverse_lazy('list_tasks')
+    success_url = '/'
     form_class = ActionItemCreateForm
     
-    def post(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         self.initiator_id = request.GET.get('initiator_id')
-        return super(ActionItemCreate, self).post(request, *args, **kwargs) 
+        return super(ActionItemCreate, self).get(request, *args, **kwargs) 
 
-    def form_valid(self, form):
-        form.instance.initiator_id = self.initiator_id
-        return super(ActionItemCreate, self).form_valid(form)
-        
+    def get_initial(self):
+        initial = super(ActionItemCreate, self).get_initial().copy()
+        initial['initiator'] = self.initiator_id
+        return initial
 
 class ActionItemUpdate(UpdateView):
     model = ActionItem
