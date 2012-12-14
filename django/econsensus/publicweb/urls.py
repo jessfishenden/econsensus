@@ -2,11 +2,14 @@ from django.conf.urls.defaults import patterns, url
 from django.contrib.auth.decorators import login_required
 from django.views.generic.detail import DetailView
 
+from actionitems.views import ActionItemList, ActionItemUpdate, ActionItemSync
+
 from views import DecisionCreate, DecisionUpdate, \
                     DecisionDetail, DecisionList, \
                     ExportCSV, FeedbackCreate, \
                     FeedbackSnippetCreate, FeedbackUpdate, \
-                    OrganizationRedirectView
+                    OrganizationRedirectView, \
+                    EconsensusActionItemCreate
 
 from models import Feedback
 
@@ -71,4 +74,12 @@ urlpatterns = patterns('econsensus.publicweb.views',
     url(r'^$', 
         OrganizationRedirectView.as_view(),
         name='publicweb_root'),
+        
+    #action item urls
+    url(r'^item/detail/(?P<pk>[\d]+)/actionitem/add$',
+        EconsensusActionItemCreate.as_view(), name='actionitems_add'),    
+    url(r'^item/detail/(?P<pk>[\d]+)/actionitem/(?P<actionitempk>[\d]+)$',
+        ActionItemUpdate.as_view(), name='actionitems_edit'),                       
+    url(r'^$', ActionItemList.as_view(), name='actionitems_list'),
+    url(r'(?P<pk>[\d]+)/sync/$', ActionItemSync.as_view(), name='actionitems_sync'),    
     )

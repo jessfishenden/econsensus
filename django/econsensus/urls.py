@@ -17,7 +17,6 @@ urlpatterns = patterns('',
     url(r'^notification/', include('notification.urls')),
     url(r'^comments/', include('django.contrib.comments.urls')),
     url(r'^organizations/', include('custom_organizations.urls')),
-    url(r'^actionitems/', include('actionitems.urls')),
     url(r'^invitations/', include(invitation_backend().get_urls())),
     url(r'', include('econsensus.publicweb.urls')),
 )

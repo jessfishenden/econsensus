@@ -87,11 +87,29 @@
             {% endfor %}
             {% endwith %}
 		</dl>
-{% if "edit_decisions_feedback" in organization_permissions %}		
-			<div class="controls">
-				<a class="edit" href="{% url 'publicweb_decision_update' object.id %}">Edit</a>
+		
+		<dl class="actionitems">
+		    <div class="date">
+			    {% trans "Action Items" %}
+			    {% if "edit_decisions_feedback" in organization_permissions %}		
+					<a href="{% url 'actionitems_add' pk=object.id %}"><strong>{% trans "Add" %}</strong></a>
+				{% endif %}
 			</div>
+                {% for actionitem in actionitems %}
+                    <dt>
+                    <a href="{% url 'actionitems_edit' pk=object.id actionitempk=actionitem.id  %}">{{ actionitem.id }}</a>
+                    {{ actionitem.title }}
+                    {{ actionitem.is_done }}
+                    </dt>
+                {% endfor %}
+		</dl>
+		
+{% if "edit_decisions_feedback" in organization_permissions %}		
+		<div class="controls">
+			<a class="edit" href="{% url 'publicweb_decision_update' object.id %}">Edit</a>
+		</div>
 {% endif %}
+
 		</div>
 	</div>
 </div>

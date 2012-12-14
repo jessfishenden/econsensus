@@ -1,6 +1,8 @@
 # Create your views here.
 from notification import models as notification
 from organizations.models import Organization
+from actionitems.models import ActionItem
+from actionitems.views import ActionItemCreate
 
 from django.core.urlresolvers import reverse
 from django.contrib.auth.decorators import login_required
@@ -130,7 +132,21 @@ class DecisionDetail(DetailView):
         context['organization'] = self.object.organization
         context['tab'] = self.object.status
         context['rating_names'] = [unicode(x) for x in Feedback.rating_names]
+        context['actionitems'] = ActionItem.objects.filter(origin = self.kwargs.get('pk'))
         return context
+
+
+class EconsensusActionItemCreate(ActionItemCreate):
+    template_name = 'actionitems/create.html'
+    
+    def get_success_url(self, *args, **kwargs):
+        return reverse('publicweb_item_detail', args=[self.kwargs.get('pk')])
+
+    @method_decorator(login_required)
+    @method_decorator(permission_required_or_403('edit_decisions_feedback', (Organization, 'decision', 'pk')))    
+    def get(self, request, *args, **kwargs):
+        self.origin = kwargs.get('pk')
+        return super(ActionItemCreate, self).get(request, *args, **kwargs)
 
 
 class DecisionList(ListView):
