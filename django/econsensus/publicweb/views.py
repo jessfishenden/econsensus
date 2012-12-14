@@ -1,6 +1,7 @@
 # Create your views here.
 from notification import models as notification
 from organizations.models import Organization
+from actionitems.models import ActionItem
 
 from django.core.urlresolvers import reverse
 from django.contrib.auth.decorators import login_required
@@ -130,6 +131,8 @@ class DecisionDetail(DetailView):
         context['organization'] = self.object.organization
         context['tab'] = self.object.status
         context['rating_names'] = [unicode(x) for x in Feedback.rating_names]
+        # TODO: limit this list to relevant Decision
+        context['task_list'] = ActionItem.objects.all()
         return context
 
 
